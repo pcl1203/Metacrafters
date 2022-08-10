@@ -92,7 +92,17 @@ function App() {
       }
     }
   };
+  // disconnects wallet
+  const disconnectWallet = async () => {
+    // @ts-ignore
+    const { solana } = window;
 
+    if (walletKey && solana) {
+
+      await solana.disconnect();
+      setWalletKey(undefined); // clear the wallet key
+    }
+  };
 	// HTML code for the app
   return (
     <div className="App">
@@ -112,7 +122,21 @@ function App() {
             Connect Wallet
           </button>
         )}
-        {provider && walletKey && <p>Connected account</p> }
+        {provider && walletKey && (
+          <p>Connected on: {walletKey.toString()}
+          <button
+          style={{
+            fontSize: "16px",
+            padding: "15px",
+            fontWeight: "bold",
+            borderRadius: "5px",
+            position: "absolute",
+            top: "0",
+            right: "0"
+          }}
+          onClick={disconnectWallet}>Disconnect Wallet</button>
+          </p>
+        )}
 
         {!provider && (
           <p>

@@ -108,7 +108,7 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h2>Connect to Phantom Wallet</h2>
-      </header>
+      
       {provider && !walletKey && (
           <button
             style={{
@@ -144,6 +144,7 @@ function App() {
             <a href="https://phantom.app/">Phantom Browser extension</a>
           </p>
         )}
+        </header>
     </div>
   );
 }

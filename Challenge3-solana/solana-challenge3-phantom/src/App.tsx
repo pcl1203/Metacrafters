@@ -23,29 +23,19 @@ import {
 
 function App() {
   // create state variable for the provider
-  const [provider, setProvider] = useState<PhantomProvider | undefined>(
-    undefined
-  );
+  const [provider, setProvider] = useState<PhantomProvider | undefined>(undefined);
 
-	// create state variable for the wallet key
-  const [phantomwalletKey, setPhantomWalletKey] = useState<Keypair | undefined>(
-  undefined
-  );
+	// create state variable for the Phantom wallet key
+  const [phantomwalletKey, setPhantomWalletKey] = useState<Keypair | undefined>(undefined);
 
-	// create state variable for the wallet balance
-  const [phantomwalletBalance, setPhantomWalletBalance] = useState<number | 0>(
-    0
-    );
+	// create state variable for the Phantom wallet balance
+  const [phantomwalletBalance, setPhantomWalletBalance] = useState<number | 0>(0);
 
   // create state variable for the new wallet key
-  const [newwalletKey, setNewWalletKey] = useState<Keypair | undefined>(
-    undefined
-    );
+  const [newwalletKey, setNewWalletKey] = useState<Keypair | undefined>(undefined);
 
   // create state variable for the new wallet balance
-  const [newwalletBalance, setNewWalletBalance] = useState<number | 0>(
-    0
-    );
+  const [newwalletBalance, setNewWalletBalance] = useState<number | 0>(0);
 
   // this is the function that runs whenever the component updates (e.g. render, refresh)
   useEffect(() => {
@@ -57,7 +47,7 @@ function App() {
   }, []);
 
   /**
-   * @description prompts user to connect wallet if it exists.
+   * @description prompts user to connect to phantom wallet if it exists.
 	 * This function is called when the connect wallet button is clicked
    */
   const connectWallet = async () => {
@@ -75,13 +65,14 @@ function App() {
   const createRandomWallet = async () => {
     const newWallet = await establishNewWallet();
     setNewWalletKey(newWallet);  
-    await airdropSolWallet(newWallet.publicKey, 2.1); 
+    await airdropSolWallet(newWallet.publicKey, 2); 
     const balance = await getWalletBalance(newWallet.publicKey);
     setNewWalletBalance(balance);
   };
 
   /**
-   * @description prompts user to airdrops 2 SOL.
+   * @description prompts user to sends 2 SOL from the new wallet
+   * This function is called when the Add 2 Sol button was clicked
    */
    const addSolToNewWallet = async () => {   
     await airdropSolWallet(newwalletKey?.publicKey! , 2); 
@@ -89,21 +80,28 @@ function App() {
     setNewWalletBalance(balance);
   };
 
-  // disconnects wallet
+  /**
+   * @description disconnects to connected phantom wallet
+   * This function is called when the Disconnect button was clicked
+   */
   const disconnectWallet = async () => {
     if (phantomwalletKey) {
       await disconnectPhantomWallet();
-      setPhantomWalletKey(undefined); // clear the wallet key
+      setPhantomWalletKey(undefined); // clear the phantom wallet key
     }
   };
 
-  // Transfer 2 sol from generated wallet to phantom wallet
+
+  /**
+   * @description Transfer 2 sol from generated wallet to phantom wallet
+   * This function is called when the Transfer 2 Sol button was clicked
+   */
   const txSolFromNewWalletToPhantomWallet = async () => {
     if (newwalletKey && phantomwalletKey) {
       await sendSol(newwalletKey, phantomwalletKey, 2);
-      let balance = await getWalletBalance(newwalletKey!.publicKey!);
+      let balance = await getWalletBalance(newwalletKey?.publicKey!);
       setNewWalletBalance(balance);
-      balance = await getWalletBalance(phantomwalletKey!.publicKey);
+      balance = await getWalletBalance(phantomwalletKey?.publicKey!);
       setPhantomWalletBalance(balance);
     }
   };

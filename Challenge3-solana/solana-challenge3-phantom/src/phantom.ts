@@ -48,7 +48,6 @@ export interface PhantomProvider {
 
   /**
    * @description prompts user to connect wallet if it exists.
-	 * This function is called when the connect wallet button is clicked
    */
    export async function connectPhantomWallet(): Promise<Keypair | undefined> {
     // @ts-ignore
@@ -69,12 +68,14 @@ export interface PhantomProvider {
     return undefined;
   };
 
-  // disconnects wallet
+  /**
+   * @description disconnects to phantom wallet
+   */
   export async function disconnectPhantomWallet() {
     // @ts-ignore
     const { solana } = window;
-
     if (solana && solana.isConnected) {
+      console.log('Disconnects to phantom wallet account');
       await solana.disconnect();
     }
   };

@@ -13,7 +13,7 @@ import {
 } from '@solana/web3.js';
 
 /**
- * Generate an account to pay for everything
+ * @description Generate an a wallet
  */
 export async function establishNewWallet(): Promise<Keypair> {
   // Generate a keypair
@@ -23,7 +23,9 @@ export async function establishNewWallet(): Promise<Keypair> {
   return createdWallet;
 }
 
-// Get the wallet balance from a given signature
+/**
+ * @description Airdrops sol to a target public key
+ */
 export async function airdropSolWallet(publicKey:PublicKey, sol:number): Promise<void> {
   // Connect to the Devnet
   const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
@@ -33,11 +35,13 @@ export async function airdropSolWallet(publicKey:PublicKey, sol:number): Promise
       new PublicKey(publicKey),
       sol * LAMPORTS_PER_SOL,
     );
-  
     await connection.confirmTransaction(sig);
+    console.log(`Successfully airdrops ${sol} SOL to Address: ${publicKey.toBase58()}`);
 }
 
-// Get the wallet balance from a given signature
+/**
+ * @description Get the wallet balance from a given signature
+ */
 export async function getWalletBalance(publicKey:PublicKey): Promise<number> {
     // Connect to the Devnet
     const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
@@ -46,24 +50,37 @@ export async function getWalletBalance(publicKey:PublicKey): Promise<number> {
     const walletBalance = await connection.getBalance(
         new PublicKey(publicKey)
     );
+    
     let balance:number = walletBalance / LAMPORTS_PER_SOL;     
+    console.log(`Address: ${publicKey.toBase58()} has ${balance} SOL`);
     return balance;
 }
 
-// Send sol from wallet to another wallet
+/**
+ * @description Sends sol from wallet to another wallet
+ */
 export async function sendSol(fromKeypair:Keypair, toKeypair:Keypair, sol:number): Promise<void> {
-  // Connect to the Devnet
-  const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+  try {   
+    // Connect to the Devnet
+    const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
 
-  const senderKeypair = Keypair.fromSecretKey(fromKeypair.secretKey);
+    const senderKeypair = Keypair.fromSecretKey(fromKeypair.secretKey);
 
-  const transaction = new Transaction().add(
-    SystemProgram.transfer({
-      fromPubkey: fromKeypair.publicKey,
-      toPubkey: toKeypair.publicKey,
-      lamports: sol * LAMPORTS_PER_SOL
-    })
-  );
-  await sendAndConfirmTransaction(connection, transaction, [senderKeypair]);
+    const transaction = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: fromKeypair.publicKey,
+        toPubkey: toKeypair.publicKey,
+        lamports: sol * LAMPORTS_PER_SOL
+      })
+    );
+    await sendAndConfirmTransaction(connection, transaction, [senderKeypair]);
 
+    console.log(`Successfully sends ${sol} SOL 
+    to Address: ${toKeypair.publicKey.toBase58()} 
+    from Address: ${fromKeypair.publicKey.toBase58()}`);
+  } catch (error) {
+    // possible error on trasferring SOL with insufficient funds
+    console.log(`Failed sending SOL with error: 
+    ${error}`);
+  }
 }

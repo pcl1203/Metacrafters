@@ -1,55 +1,25 @@
 
 // importfunctionalities
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
 import {
-  PublicKey,
-  Transaction,
+  Keypair,
 } from "@solana/web3.js";
 import {useEffect , useState } from "react";
 
-// create types
-type DisplayEncoding = "utf8" | "hex";
+import {
+  establishNewWallet,
+  getWalletBalance,
+  airdropSolWallet,
+  sendSol,
+} from './generic';
 
-type PhantomEvent = "disconnect" | "connect" | "accountChanged";
-type PhantomRequestMethod =
-  | "connect"
-  | "disconnect"
-  | "signTransaction"
-  | "signAllTransactions"
-  | "signMessage";
-
-interface ConnectOpts {
-  onlyIfTrusted: boolean;
-}
-
-// create a provider interface (hint: think of this as an object) to store the Phantom Provider
-interface PhantomProvider {
-  publicKey: PublicKey | null;
-  isConnected: boolean | null;
-  signTransaction: (transaction: Transaction) => Promise<Transaction>;
-  signAllTransactions: (transactions: Transaction[]) => Promise<Transaction[]>;
-  signMessage: (
-    message: Uint8Array | string,
-    display?: DisplayEncoding
-  ) => Promise<any>;
-  connect: (opts?: Partial<ConnectOpts>) => Promise<{ publicKey: PublicKey }>;
-  disconnect: () => Promise<void>;
-  on: (event: PhantomEvent, handler: (args: any) => void) => void;
-  request: (method: PhantomRequestMethod, params: any) => Promise<unknown>;
-}
-
-/**
- * @description gets Phantom provider, if it exists
- */
- const getProvider = (): PhantomProvider | undefined => {
-  if ("solana" in window) {
-    // @ts-ignore
-    const provider = window.solana as any;
-    if (provider.isPhantom) return provider as PhantomProvider;
-  }
-};
+import {
+  PhantomProvider,
+  getProvider,
+  connectPhantomWallet,
+  disconnectPhantomWallet,
+} from './phantom';
 
 function App() {
   // create state variable for the provider
@@ -58,9 +28,24 @@ function App() {
   );
 
 	// create state variable for the wallet key
-  const [walletKey, setWalletKey] = useState<PhantomProvider | undefined>(
+  const [phantomwalletKey, setPhantomWalletKey] = useState<Keypair | undefined>(
   undefined
   );
+
+	// create state variable for the wallet balance
+  const [phantomwalletBalance, setPhantomWalletBalance] = useState<number | 0>(
+    0
+    );
+
+  // create state variable for the new wallet key
+  const [newwalletKey, setNewWalletKey] = useState<Keypair | undefined>(
+    undefined
+    );
+
+  // create state variable for the new wallet balance
+  const [newwalletBalance, setNewWalletBalance] = useState<number | 0>(
+    0
+    );
 
   // this is the function that runs whenever the component updates (e.g. render, refresh)
   useEffect(() => {
@@ -76,40 +61,104 @@ function App() {
 	 * This function is called when the connect wallet button is clicked
    */
   const connectWallet = async () => {
-    // @ts-ignore
-    const { solana } = window;
-
-		// checks if phantom wallet exists
-    if (solana) {
-      try {
-				// connects wallet and returns response which includes the wallet public key
-        const response = await solana.connect();
-        console.log('wallet account ', response.publicKey.toString());
-				// update walletKey to be the public key
-        setWalletKey(response.publicKey.toString());
-      } catch (err) {
-      // { code: 4001, message: 'User rejected the request.' }
-      }
-    }
+    const phantomKey = await connectPhantomWallet();
+    // update walletKey from phantom provider
+    setPhantomWalletKey(phantomKey);
+    const balance = await getWalletBalance(phantomKey!.publicKey);
+    setPhantomWalletBalance(balance);
   };
+
+  /**
+   * @description prompts user to create wallet and airdrops 2 SOL.
+	 * This function is called when the Create wallet button is clicked
+   */
+  const createRandomWallet = async () => {
+    const newWallet = await establishNewWallet();
+    setNewWalletKey(newWallet);  
+    await airdropSolWallet(newWallet.publicKey, 2.1); 
+    const balance = await getWalletBalance(newWallet.publicKey);
+    setNewWalletBalance(balance);
+  };
+
+  /**
+   * @description prompts user to airdrops 2 SOL.
+   */
+   const addSolToNewWallet = async () => {   
+    await airdropSolWallet(newwalletKey?.publicKey! , 2); 
+    const balance = await getWalletBalance(newwalletKey?.publicKey!);
+    setNewWalletBalance(balance);
+  };
+
   // disconnects wallet
   const disconnectWallet = async () => {
-    // @ts-ignore
-    const { solana } = window;
-
-    if (walletKey && solana) {
-
-      await solana.disconnect();
-      setWalletKey(undefined); // clear the wallet key
+    if (phantomwalletKey) {
+      await disconnectPhantomWallet();
+      setPhantomWalletKey(undefined); // clear the wallet key
     }
   };
+
+  // Transfer 2 sol from generated wallet to phantom wallet
+  const txSolFromNewWalletToPhantomWallet = async () => {
+    if (newwalletKey && phantomwalletKey) {
+      await sendSol(newwalletKey, phantomwalletKey, 2);
+      let balance = await getWalletBalance(newwalletKey!.publicKey!);
+      setNewWalletBalance(balance);
+      balance = await getWalletBalance(phantomwalletKey!.publicKey);
+      setPhantomWalletBalance(balance);
+    }
+  };
+
 	// HTML code for the app
   return (
     <div className="App">
       <header className="App-header">
-        <h2>Connect to Phantom Wallet</h2>
-      
-      {provider && !walletKey && (
+        {!newwalletKey && (
+          <button
+            style={{
+              fontSize: "16px",
+              padding: "15px",
+              fontWeight: "bold",
+              borderRadius: "5px",
+            }}
+            onClick={createRandomWallet}
+          >
+            Generate Wallet
+          </button>
+        )}
+        {newwalletKey && (
+          <p><button
+            style={{
+              fontSize: "16px",
+              padding: "15px",
+              fontWeight: "bold",
+              borderRadius: "5px",
+            }}
+            onClick={addSolToNewWallet}
+          >
+          Add 2 Sol
+          </button>
+          <br></br>
+          {newwalletKey?.publicKey?.toBase58().toString()}
+          <br></br>           
+          Balance: {newwalletBalance} Sol
+          </p>
+        )}
+
+        {newwalletKey && phantomwalletKey && (
+          <button
+            style={{
+              fontSize: "16px",
+              padding: "15px",
+              fontWeight: "bold",
+              borderRadius: "5px",
+            }}
+            onClick={txSolFromNewWalletToPhantomWallet}
+          >
+          Transfer 2 Sol
+          </button>
+        )}
+
+        {provider && !phantomwalletKey && (
           <button
             style={{
               fontSize: "16px",
@@ -119,22 +168,23 @@ function App() {
             }}
             onClick={connectWallet}
           >
-            Connect Wallet
+            Connect to Phantom
           </button>
         )}
-        {provider && walletKey && (
-          <p>Connected on: {walletKey.toString()}
+        {provider && phantomwalletKey && (
+          <p>
           <button
           style={{
             fontSize: "16px",
             padding: "15px",
             fontWeight: "bold",
             borderRadius: "5px",
-            position: "absolute",
-            top: "0",
-            right: "0"
           }}
-          onClick={disconnectWallet}>Disconnect Wallet</button>
+          onClick={disconnectWallet}>Disconnect Phantom</button>
+          <br></br>
+          {phantomwalletKey?.publicKey?.toString()}
+          <br></br> 
+          Balance: {phantomwalletBalance} Sol
           </p>
         )}
 
@@ -144,8 +194,10 @@ function App() {
             <a href="https://phantom.app/">Phantom Browser extension</a>
           </p>
         )}
-        </header>
+      </header>
     </div>
+
+
   );
 }
 
